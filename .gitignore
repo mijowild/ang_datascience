@@ -1,0 +1,6 @@
+*.m
+*.mat
+*.txt
+*.pdf
+*.ipynb_checkpoints
+*__pycache__
