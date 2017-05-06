@@ -4,3 +4,6 @@
 *.pdf
 *.ipynb_checkpoints
 *__pycache__
+*.project
+*.pydevproject
+*.settings
