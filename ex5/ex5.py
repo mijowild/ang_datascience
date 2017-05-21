@@ -83,9 +83,9 @@ def polyFeatures(X, p):
 
 
 def featureNormalize(X):    
-    mu = mean(X)
+    mu = X.mean(axis=0)
     X_norm = X - mu
-    sigma = std(X_norm)
+    sigma = std(X_norm, axis=0)
     X_norm = X_norm / sigma
     return X_norm, mu, sigma
 
@@ -109,6 +109,39 @@ def plotFit(min_x, max_x, mu, sigma, theta, p, ax):
     
     # Plot
     ax.plot(x, dot(X_poly, theta), '--', LineWidth=2)
+
+
+def validationCurve(X, y, X_val, yval):
+    #VALIDATIONCURVE Generate the train and validation errors needed to
+    #plot a validation curve that we can use to select lambda
+    
+    # Selected values of lambda (you should not change this)
+    lambda_vec = [0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10]
+    
+    # You need to return these variables correctly.
+    # ====================== YOUR CODE HERE ======================
+    # Instructions: Fill in this function to return training errors in 
+    #               error_train and the validation errors in error_val. The 
+    #               vector lambda_vec contains the different lambda parameters 
+    #               to use for each calculation of the errors, i.e, 
+    #               error_train(i), and error_val(i) should give 
+    #               you the errors obtained after training with 
+    #               lambda = lambda_vec(i)
+    #
+    # Note: You can loop over lambda_vec with the following:
+    #
+    error_train, error_val = [], []
+    for i, lam in enumerate(lambda_vec):        
+        theta = trainLinearReg(X, y, lam)
+        et = linearRegCostFunction(theta, X, y, 0) # set lam to 0
+        ev = linearRegCostFunction(theta, X_val, yval, 0) # set lam to 0    
+        error_train.append(et)
+        error_val.append(ev)
+    return [lambda_vec, np.array(error_train), np.array(error_val)]
+        
+
+        
+
 
 def main():
     ## Machine Learning Online Class
@@ -195,14 +228,12 @@ def main():
     X_poly = np.c_[ones((m, 1)), X_poly];                   # Add Ones
     # # Map X_poly_test and normalize (using mu and sigma)
     X_poly_test = polyFeatures(Xtest, p);
-    X_poly_test = X_poly_test - mu
-    X_poly_test = X_poly_test / sigma
+    X_poly_test = (X_poly_test - mu) / sigma
     X_poly_test = np.c_[ones((X_poly_test.shape[0], 1)), X_poly_test]
  
     # # Map X_poly_val and normalize (using mu and sigma)
     X_poly_val = polyFeatures(Xval, p);
-    X_poly_val = X_poly_val - mu
-    X_poly_val = X_poly_val / sigma
+    X_poly_val = (X_poly_val - mu) / sigma
     X_poly_val = np.c_[ones((X_poly_val.shape[0], 1)), X_poly_val]
     
     print('Normalized Training Example 1:');
@@ -213,57 +244,39 @@ def main():
     # #  values of lambda. The code below runs polynomial regression with 
     # #  lambda = 0. You should try running the code with different values of
     # #  lambda to see how the fit and learning curve change.
-    lam = 0;
-    theta = trainLinearReg(X_poly, y, lam);
-    # # Plot training data and fit
-    fig, ax = plt.subplots(1)
-    ax.plot(X, y, 'rx', MarkerSize=10, LineWidth=1.5)
-    plotFit(min(X), max(X), mu, sigma, theta, p, ax)
-    plt.show()
-#     xlabel('Change in water level (x)');
-#     ylabel('Water flowing out of the dam (y)');
-#     title (sprintf('Polynomial Regression Fit (lambda = #f)', lambda));
-#      
-#     figure(2);
-#     [error_train, error_val] = ...
-#         learningCurve(X_poly, y, X_poly_val, yval, lambda);
-#     plot(1:m, error_train, 1:m, error_val);
-#      
-#     title(sprintf('Polynomial Regression Learning Curve (lambda = #f)', lambda));
-#     xlabel('Number of training examples')
-#     ylabel('Error')
-#     axis([0 13 0 100])
-#     legend('Train', 'Cross Validation')
-#      
-#     fprintf('Polynomial Regression (lambda = #f)\n\n', lambda);
-#     fprintf('# Training Examples\tTrain Error\tCross Validation Error\n');
-#     for i = 1:m
-#         fprintf('  \t#d\t\t#f\t#f\n', i, error_train(i), error_val(i));
-#     end
+    fig, all_axes = plt.subplots(2, 5)
+    for i, lam in enumerate([1,2,3,4,5]):
+        axes = all_axes[:,i]
+        
+        theta = trainLinearReg(X_poly, y, lam);
+        # # Plot training data and fit
+        ax = axes[0]
+        ax.plot(X, y, 'rx', MarkerSize=10, LineWidth=1.5)
+        plotFit(min(X), max(X), mu, sigma, theta, p, ax)
+        ax.set_xlabel('Change in water level (x)');
+        ax.set_ylabel('Water flowing out of the dam (y)');
+        ax.set_title ('Poly Reg Fit (lam = {})'.format(lam));
+        ax.grid()
+        ax.set_ylim([0, 50])
+        
+        ax = axes[1]
+        error_train, error_val = learningCurve(X_poly, y, X_poly_val, yval, lam);
+        ax.plot(arange(m), error_train, label='error_train')
+        ax.plot(arange(m), error_val, label='error_val')
+        ax.set_xlabel('Number of training examples')
+        ax.set_ylabel('Error')
+        ax.legend()
+        ax.grid()
+        ax.set_ylim([0, 20])
 
     # ## =========== Part 8: Validation for Selecting Lambda =============
-    # #  You will now implement validationCurve to test various values of 
-    # #  lambda on a validation set. You will then use this to select the
-    # #  "best" lambda value.
-    # #
-    # 
-    # [lambda_vec, error_train, error_val] = ...
-    #     validationCurve(X_poly, y, X_poly_val, yval);
-    # 
-    # close all;
-    # plot(lambda_vec, error_train, lambda_vec, error_val);
-    # legend('Train', 'Cross Validation');
-    # xlabel('lambda');
-    # ylabel('Error');
-    # 
-    # fprintf('lambda\t\tTrain Error\tValidation Error\n');
-    # for i = 1:length(lambda_vec)
-    # 	fprintf(' #f\t#f\t#f\n', ...
-    #             lambda_vec(i), error_train(i), error_val(i));
-    # end
-    # 
-    # fprintf('Program paused. Press enter to continue.\n');
-    # pause;
+    lambda_vec, error_train, error_val = validationCurve(X_poly, y, X_poly_val, yval)
+    fig, ax = plt.subplots(1)
+    ax.plot(lambda_vec, error_train, label='train');
+    ax.plot(lambda_vec, error_val, label='val');
+    ax.legend();
+    ax.set_xlabel('lambda');
+    ax.set_ylabel('Error');
 
 if __name__ == '__main__':
     main()
